@@ -280,6 +280,16 @@ class RatelimitTests(TestCase):
         with self.assertRaises(InvalidCacheBackendError):
             view(req)
 
+    @override_settings(RATELIMIT_USE_CACHE='connection-errors')
+    def test_cache_connection_error(self):
+
+        @ratelimit(key='ip', rate='1/m')
+        def view(request):
+            return request
+
+        req = rf.post('/')
+        assert view(req)
+
     def test_user_or_ip(self):
         """Allow custom functions to set cache keys."""
 
@@ -389,6 +399,36 @@ class RatelimitTests(TestCase):
         assert do_increment(req), 'Request should be rate limited.'
         assert not_increment(req), 'Request should be rate limited.'
 
+    @override_settings(RATELIMIT_USE_CACHE='connection-errors')
+    def test_is_ratelimited_cache_connection_error(self):
+        def get_key(group, request):
+            return 'test_is_ratelimited_key'
+
+        def not_increment(request):
+            return is_ratelimited(request, increment=False,
+                                  method=is_ratelimited.ALL, key=get_key,
+                                  rate='1/m', group='a')
+
+        def do_increment(request):
+            return is_ratelimited(request, increment=True,
+                                  method=is_ratelimited.ALL, key=get_key,
+                                  rate='1/m', group='a')
+
+        req = rf.get('/')
+        # Does not increment. Count still 0. Does not rate limit
+        # because 0 < 1.
+        assert not not_increment(req), 'Request should not be rate limited.'
+
+        # Increments. Does not rate limit because 0 < 1. Count now 1.
+        assert not do_increment(req), 'Request should not be rate limited.'
+
+        # Does not increment. Count still 1. Not limited because 1 > 1
+        # is false.
+        assert not not_increment(req), 'Request should not be rate limited.'
+
+        # Count = 2, 2 > 1.
+        assert not do_increment(req), 'Request should not be rate limited.'
+        assert not not_increment(req), 'Request should not be rate limited.'
 
 class RatelimitCBVTests(TestCase):
 
