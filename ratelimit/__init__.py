@@ -1,5 +1,5 @@
-VERSION = (0, 6, 0, 'WEB-22032')
-__version__ = '.'.join(map(str, VERSION))
+VERSION = (0, 6, 0)
+__version__ = '.'.join(map(str, VERSION)) + '+WEB-22032'
 
 ALL = (None,)  # Sentinel value for all HTTP methods.
 UNSAFE = ['DELETE', 'PATCH', 'POST', 'PUT']
